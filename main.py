@@ -11,7 +11,7 @@ from Analytics.AggregatedCashflows import (
     aggregate_daily_cashflows_by_type,
     aggregate_monthly_cashflows_by_type
 )
-from RBI.Reporting import generate_rbi_reports
+from rbi.reporting import generate_rbi_reports
 
 
 def load_portfolio_from_excel(file_path):
@@ -104,7 +104,7 @@ def run_alm(portfolio, valuation_date=None):
     daily_agg = aggregate_daily_cashflows_by_type(cashflows, instrument_map)
     monthly_agg = aggregate_monthly_cashflows_by_type(cashflows, instrument_map)
 
-    # 5. RBI Regulatory Reports
+    # 5. rbi Regulatory Reports
     rbi_reports = generate_rbi_reports({
         "daily_agg": daily_agg,
         "monthly_agg": monthly_agg,
