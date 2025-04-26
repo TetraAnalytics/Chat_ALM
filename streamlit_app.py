@@ -2,18 +2,7 @@
 
 import streamlit as st
 import plotly.express as px
-import pandas as pd  # needed for combining cashflows
 from main import run_alm, load_portfolio_from_excel
-from rbi.reporting import generate_rbi_reports
-
-# --- Quick Import Test for generate_rbi_reports ---
-try:
-    dummy_test = generate_rbi_reports({})
-    print("✅ rbi.reporting imported successfully.")
-except Exception as e:
-    print(f"❌ Import test failed: {e}")
-# ---------------------------------------------------
-
 
 st.set_page_config(page_title="ALM System", layout="wide")
 st.title("📈 Asset Liability Management System")
@@ -35,13 +24,9 @@ if uploaded_file:
         st.header("Portfolio Pricing Summary")
         st.dataframe(results["pricing"], use_container_width=True)
 
-        st.header("Cashflows (First 100 Rows)")
-
-        # Combine all instrument cashflows together
-        combined_cashflows_df = pd.concat(results["cashflows"].values())
-
-        # Display first 100 rows
-        st.dataframe(combined_cashflows_df.head(100), use_container_width=True)
+        st.header("Cashflows (First Instrument Shown)")
+        first_instrument_id = list(results["cashflows"].keys())[0]
+        st.dataframe(results["cashflows"][first_instrument_id].head(100), use_container_width=True)
 
         st.header("Daily Aggregated Cashflows")
         st.dataframe(results["daily_agg"].head(100), use_container_width=True)
@@ -51,14 +36,22 @@ if uploaded_file:
 
         # Plot Monthly Cashflow
         st.subheader("Monthly Cashflow Profile")
-        fig = px.bar(
-            results["monthly_agg"],
-            x="Month",
-            y="NetCashflow",
-            title="Monthly Net Cashflows",
-            labels={"Month": "Month", "NetCashflow": "Cashflow Amount"},
+        if "Month" in results["monthly_agg"].columns:
+            x_axis = "Month"
+        else:
+            x_axis = results["monthly_agg"].columns[0]  # fallback in case
+
+        st.plotly_chart(
+            px.bar(
+                results["monthly_agg"],
+                x=x_axis,
+                y=["interest", "principal"],
+                title="Monthly Interest and Principal Cashflows",
+                labels={x_axis: "Month", "value": "Amount"},
+                barmode="stack"
+            ),
+            use_container_width=True
         )
-        st.plotly_chart(fig, use_container_width=True)
 
         # Download Results
         st.header("Download ALM Results")
