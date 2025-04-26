@@ -1,9 +1,19 @@
 # streamlit_app.py
 
 import streamlit as st
-import pandas as pd
 import plotly.express as px
+import pandas as pd  # needed for combining cashflows
 from main import run_alm, load_portfolio_from_excel
+from rbi.reporting import generate_rbi_reports
+
+# --- Quick Import Test for generate_rbi_reports ---
+try:
+    dummy_test = generate_rbi_reports({})
+    print("✅ rbi.reporting imported successfully.")
+except Exception as e:
+    print(f"❌ Import test failed: {e}")
+# ---------------------------------------------------
+
 
 st.set_page_config(page_title="ALM System", layout="wide")
 st.title("📈 Asset Liability Management System")
@@ -26,7 +36,12 @@ if uploaded_file:
         st.dataframe(results["pricing"], use_container_width=True)
 
         st.header("Cashflows (First 100 Rows)")
-        st.dataframe(pd.concat(results["cashflows"].values()).head(100), use_container_width=True)
+
+        # Combine all instrument cashflows together
+        combined_cashflows_df = pd.concat(results["cashflows"].values())
+
+        # Display first 100 rows
+        st.dataframe(combined_cashflows_df.head(100), use_container_width=True)
 
         st.header("Daily Aggregated Cashflows")
         st.dataframe(results["daily_agg"].head(100), use_container_width=True)
@@ -36,17 +51,14 @@ if uploaded_file:
 
         # Plot Monthly Cashflow
         st.subheader("Monthly Cashflow Profile")
-        if "Month" in results["monthly_agg"].columns and "interest" in results["monthly_agg"].columns:
-            fig = px.bar(
-                results["monthly_agg"],
-                x="Month",
-                y="interest",
-                title="Monthly Interest Cashflows",
-                labels={"Month": "Month", "interest": "Cashflow Amount"},
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("Monthly aggregation missing required columns for charting.")
+        fig = px.bar(
+            results["monthly_agg"],
+            x="Month",
+            y="NetCashflow",
+            title="Monthly Net Cashflows",
+            labels={"Month": "Month", "NetCashflow": "Cashflow Amount"},
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
         # Download Results
         st.header("Download ALM Results")
