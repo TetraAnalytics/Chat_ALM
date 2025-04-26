@@ -2,13 +2,13 @@
 
 def generate_rbi_reports(results_dict):
     """
-    Generate rbi required regulatory reports based on ALM results.
+    Generate RBI required regulatory reports based on ALM results.
 
     Args:
         results_dict (dict): Dictionary containing daily cashflows, monthly cashflows, rate shock results.
 
     Returns:
-        dict: Dictionary of rbi regulatory report DataFrames.
+        dict: Dictionary of RBI regulatory report DataFrames.
     """
 
     reports = {}
@@ -16,6 +16,7 @@ def generate_rbi_reports(results_dict):
     # Liquidity Gap Analysis
     daily_cf = results_dict.get("daily_agg")
     if daily_cf is not None:
+        daily_cf['total_cashflow'] = daily_cf['interest'] + daily_cf['principal']  # ✅ Create total_cashflow
         daily_cf['cumulative_cashflow'] = daily_cf['total_cashflow'].cumsum()
         liquidity_profile = daily_cf[['payment_date', 'cumulative_cashflow']]
         liquidity_profile.columns = ['Date', 'Cumulative Cashflow']
@@ -28,4 +29,3 @@ def generate_rbi_reports(results_dict):
         reports["Interest Rate Sensitivity"] = sensitivity
 
     return reports
-
