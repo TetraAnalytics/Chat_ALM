@@ -13,7 +13,7 @@ class Mortgage(BaseInstrument):
         self.term_months = term_months
 
         if self.country == "India":
-            self.day_count = "30/360"  # RBI standard for mortgages
+            self.day_count = "30/360"  # rbi standard for mortgages
 
     @classmethod
     def from_dataframe_row(cls, row):
