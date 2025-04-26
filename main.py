@@ -1,5 +1,3 @@
-# main.py
-
 import pandas as pd
 from Instruments.Bond import Bond
 from Instruments.Mortgage import Mortgage
@@ -104,7 +102,7 @@ def run_alm(portfolio, valuation_date=None):
     daily_agg = aggregate_daily_cashflows_by_type(cashflows, instrument_map)
     monthly_agg = aggregate_monthly_cashflows_by_type(cashflows, instrument_map)
 
-    # 5. rbi Regulatory Reports
+    # 5. RBI Regulatory Reports
     rbi_reports = generate_rbi_reports({
         "daily_agg": daily_agg,
         "monthly_agg": monthly_agg,
