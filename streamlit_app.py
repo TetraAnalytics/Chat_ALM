@@ -1,103 +1,75 @@
+# streamlit_app.py
+
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
-from main import run_alm, load_portfolio_from_excel
-from Analytics.CashflowCalculator import generate_cashflows_for_portfolio
-from Analytics.AggregatedCashflows import (
-    aggregate_daily_cashflows_by_type,
-    aggregate_monthly_cashflows_by_type
-)
-from Analytics.YieldCurveBuilder import build_zero_forward_curve
-from Analytics.RateShockEngine import apply_parallel_rate_shocks
-from Output.ExcelWriter import RBI_Regulatory_Reports_Exists
+from main import run_alm
 
-st.set_page_config(page_title="ALM App", layout="wide")
-st.title("Fixed-Income Asset-Liability Management System")
+# Streamlit App Title
+st.set_page_config(page_title="ALM SaaS Platform", layout="wide")
+st.title("📊 Asset-Liability Management (ALM) SaaS")
 
-st.write("📊 Upload your portfolio file and run full ALM analytics.")
+# File Upload
+st.sidebar.header("Upload Portfolio Excel File")
+uploaded_file = st.sidebar.file_uploader("Choose Excel file", type=["xlsx"])
 
-uploaded_file = st.file_uploader("Upload Portfolio Excel File", type=["xlsx"])
-valuation_date = st.date_input("Valuation Date", pd.to_datetime("today").date())
+# Inputs for Curves (optional)
+st.sidebar.header("Zero Curve & Forward Curve (Optional)")
+zero_curve_uploaded = st.sidebar.file_uploader("Upload Zero Curve", type=["xlsx"], key="zero")
+forward_curve_uploaded = st.sidebar.file_uploader("Upload Forward Curve", type=["xlsx"], key="forward")
 
-if uploaded_file:
-    input_file = "uploaded_portfolio.xlsx"
-    output_file = "ALM_Results.xlsx"
+valuation_date = st.sidebar.date_input("Valuation Date")
 
-    with open(input_file, "wb") as f:
-        f.write(uploaded_file.read())
+# Run Analysis
+if st.sidebar.button("Run ALM Analysis 🚀"):
+    if uploaded_file is None:
+        st.error("Please upload a portfolio Excel file before running analysis.")
+    else:
+        # Load Zero Curve if available
+        if zero_curve_uploaded is not None:
+            zero_curve = pd.read_excel(zero_curve_uploaded)
+        else:
+            zero_curve = pd.DataFrame({"Months": [0, 12, 24, 36], "Zero Rate": [0.02, 0.025, 0.03, 0.035]})
 
-    zero_curve, forward_curve = build_zero_forward_curve()
+        # Load Forward Curve if available
+        if forward_curve_uploaded is not None:
+            forward_curve = pd.read_excel(forward_curve_uploaded)
+        else:
+            forward_curve = pd.DataFrame({"Months": [0, 12, 24, 36], "Forward Rate": [0.02, 0.026, 0.032, 0.037]})
 
-    if st.button("Run ALM Analysis"):
-        with st.spinner("Processing..."):
-            run_alm(input_file, output_file, valuation_date, zero_curve, forward_curve)
+        st.success("Running ALM analysis...")
 
-        st.success("Analysis Complete!")
+        try:
+            # Run ALM system
+            results, output_buffer = run_alm(uploaded_file, valuation_date, zero_curve, forward_curve)
 
-        with open(output_file, "rb") as f:
-            st.download_button("Download ALM Results", f, file_name=output_file)
+            st.success("✅ ALM Analysis Complete!")
 
-        if RBI_Regulatory_Reports_Exists():
-            with open("RBI_Regulatory_Reports.xlsx", "rb") as f:
-                st.download_button("Download RBI Regulatory Reports", f, file_name="RBI_Regulatory_Reports.xlsx")
+            # Cashflow Charts
+            st.subheader("📈 Daily Aggregated Cashflows")
+            st.dataframe(results["daily_agg"].head(20))
 
-        # Load instruments and cash flows
-        instruments = load_portfolio_from_excel(input_file, zero_curve, forward_curve)
-        instrument_map = {i.ID: i.__class__.__name__ for i in instruments}
-        cashflows_dict = generate_cashflows_for_portfolio(instruments)
+            st.subheader("📈 Monthly Aggregated Cashflows")
+            st.dataframe(results["monthly_agg"].head(20))
 
-        # ----------------------------
-        # Daily Aggregation + Chart
-        # ----------------------------
-        daily_df = aggregate_daily_cashflows_by_type(cashflows_dict, instrument_map)
-        daily_df['total'] = daily_df['interest'] + daily_df['principal']
+            # Rate Shock Results
+            st.subheader("📉 Rate Shock Analysis")
+            st.dataframe(results["rate_shock_results"].head(20))
 
-        with st.expander("Daily Aggregated Cash Flows by Instrument Type", expanded=False):
-            fig_daily = px.bar(
-                daily_df,
-                x='payment_date',
-                y='total',
-                color='instrument_type',
-                title='Daily Aggregated Cash Flows',
-                labels={"total": "Cash Flow", "payment_date": "Date"},
+            # RBI Reports
+            st.subheader("📋 RBI Regulatory Reports")
+            for report_name, report_df in results["rbi_reports"].items():
+                with st.expander(f"View {report_name}"):
+                    st.dataframe(report_df)
+
+            # Download Button
+            st.subheader("📥 Download ALM Results")
+            st.download_button(
+                label="Download Full ALM Results Excel",
+                data=output_buffer,
+                file_name="ALM_Results.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-            st.plotly_chart(fig_daily, use_container_width=True)
-            st.dataframe(daily_df)
 
-        # ----------------------------
-        # Monthly Aggregation + Chart
-        # ----------------------------
-        monthly_df = aggregate_monthly_cashflows_by_type(cashflows_dict, instrument_map)
-        monthly_df['total'] = monthly_df['interest'] + monthly_df['principal']
-
-        with st.expander("Monthly Aggregated Cash Flows by Instrument Type", expanded=False):
-            fig_monthly = px.bar(
-                monthly_df,
-                x='Month',
-                y='total',
-                color='instrument_type',
-                title='Monthly Aggregated Cash Flows',
-                labels={"total": "Cash Flow", "Month": "Month"},
-            )
-            st.plotly_chart(fig_monthly, use_container_width=True)
-            st.dataframe(monthly_df)
-
-        # ----------------------------
-        # RBI Rate Shock Analysis
-        # ----------------------------
-        shock_df = apply_parallel_rate_shocks(instruments, valuation_date=valuation_date)
-        portfolio_shocks = shock_df[shock_df["ID"] == "PORTFOLIO_TOTAL"]
-
-        with st.expander("Interest Rate Sensitivity (RBI)", expanded=False):
-            st.subheader("Portfolio Value Under Interest Rate Shocks")
-
-            fig = px.bar(
-                portfolio_shocks,
-                x="Shock (bps)",
-                y="Price",
-                title="RBI Rate Shock Impact on Portfolio Value",
-                labels={"Price": "Portfolio Value"},
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(portfolio_shocks)
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
