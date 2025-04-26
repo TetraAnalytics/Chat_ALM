@@ -17,12 +17,11 @@ def export_results_to_excel(filepath, prices, durations, cashflows_dict,
             monthly_agg_df.to_excel(writer, sheet_name="Monthly_Aggregated_CF", index=False)
 
         if shock_df is not None:
-            shock_pivot = shock_df.pivot(index="ID", columns="Shock (bps)", values="Price").reset_index()
-            shock_pivot.to_excel(writer, sheet_name="RBI_Rate_Shock_Report", index=False)
+            # Directly export the shock_df without trying to pivot
+            shock_df.to_excel(writer, sheet_name="RBI_Rate_Shock_Report", index=False)
 
 
-def export_rbi_reports_to_excel(filepath, cashflows_dict, instruments, valuation_date):
-    from datetime import timedelta
+def export_rbi_reports_to_excel(filepath, cashflows_dict, valuation_date):
 
     RBI_BUCKETS = [
         ("1-7 days", 7), ("8-14 days", 14), ("15-30 days", 30),
