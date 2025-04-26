@@ -3,6 +3,7 @@ from dateutil.relativedelta import relativedelta
 from Instruments.BaseInstrument import BaseInstrument
 from datetime import datetime
 
+
 class DemandDeposit(BaseInstrument):
     def __init__(self, ID, notional, maturity_date, issue_date, yield_rate,
                  rate=0.00, decay_term_months=60, frequency=12, day_count="30/360", country=None):
@@ -13,6 +14,16 @@ class DemandDeposit(BaseInstrument):
 
         if self.country == "India":
             self.day_count = "30/360"  # Default for local deposits
+
+    @classmethod
+    def from_dataframe_row(cls, row):
+        return cls(
+            ID=row["ID"],
+            notional=row["Notional"],
+            withdrawal_rate=row.get("WithdrawalRate", 0.0),
+            day_count=row.get("DayCount", "30/360"),
+            country=row.get("Country", None)
+        )
 
     def generate_cashflows(self):
         start_date = pd.to_datetime(self.issue_date)

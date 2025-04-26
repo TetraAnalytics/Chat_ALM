@@ -4,6 +4,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from Instruments.BaseInstrument import BaseInstrument
 
+
 class InterestRateSwap(BaseInstrument):
     def __init__(self, ID, notional, fixed_rate, float_spread, start_date, end_date,
                  yield_rate, pay_fixed=True, frequency=4, zero_curve=None, forward_curve=None,
@@ -21,7 +22,27 @@ class InterestRateSwap(BaseInstrument):
             self.fixed_leg_day_count = "30/360"
             self.float_leg_day_count = "Actual/360"
 
-    def _interpolate_curve(self, months, curve_df, column):
+    @classmethod
+    def from_dataframe_row(cls, row):
+        return cls(
+            ID=row["ID"],
+            notional=row["Notional"],
+            fixed_rate=row.get("FixedRate", 0.0),
+            float_spread=row.get("FloatingSpread", 0.0),
+            start_date=row["IssueDate"],
+            end_date=row["MaturityDate"],
+            yield_rate=row.get("Yield", 0.0),
+            pay_fixed=row.get("PayFixed", True),
+            frequency=row.get("FixedLegFrequency", 4),
+            zero_curve=None,
+            forward_curve=None,
+            fixed_leg_day_count=row.get("DayCount", "30/360"),
+            float_leg_day_count="Actual/360",
+            country=row.get("Country", None)
+        )
+
+    @staticmethod
+    def _interpolate_curve(months, curve_df, column):
         curve_months = curve_df['Months'].values
         curve_values = curve_df[column].values
         return np.interp(months, curve_months, curve_values)

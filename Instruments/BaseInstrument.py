@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseInstrument(ABC):
     def __init__(self, ID, notional, coupon_rate, maturity_date, issue_date, yield_rate, day_count="30/360", country=None):
         self.ID = ID

@@ -1,7 +1,6 @@
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from Instruments.BaseInstrument import BaseInstrument
-import numpy_financial as npf
 from datetime import datetime
 
 
@@ -17,6 +16,21 @@ class Bond(BaseInstrument):
                 self.day_count = "Actual/Actual"
             elif self.instrument_subtype == "Corporate":
                 self.day_count = "30/360"  # or "Actual/365" if needed
+
+    @classmethod
+    def from_dataframe_row(cls, row):
+        return cls(
+            ID=row["ID"],
+            notional=row["Notional"],
+            coupon_rate=row.get("CouponRate", 0.0),
+            maturity_date=row["MaturityDate"],
+            issue_date=row["IssueDate"],
+            yield_rate=row.get("YieldRate", 0.0),
+            frequency=row.get("Frequency", 2),
+            day_count=row.get("DayCount", "30/360"),
+            country=row.get("Country", None),
+            instrument_subtype=row.get("InstrumentSubtype", "Government")
+        )
 
     def generate_cashflows(self):
         issue = pd.to_datetime(self.issue_date)
