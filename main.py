@@ -73,26 +73,30 @@ def run_alm(portfolio, valuation_date=None):
     if valuation_date is None:
         valuation_date = pd.Timestamp.today()
 
+    # 1. Generate projected cashflows
     cashflows = generate_cashflows_for_portfolio(portfolio)
+
+    # Build instrument map (needed for cashflow aggregation functions)
     instrument_map = {inst.ID: type(inst).__name__ for inst in portfolio}
+
+    # 2. Price and duration
     pricing_df = price_and_duration(portfolio, valuation_date)
+
+    # 3. Apply parallel rate shocks
     shock_results = apply_parallel_rate_shocks(portfolio)
+
+    # 4. Aggregate cashflows
     daily_agg = aggregate_daily_cashflows_by_type(cashflows, instrument_map)
     monthly_agg = aggregate_monthly_cashflows_by_type(cashflows, instrument_map)
 
-    # Build prices and durations dicts
-    prices = {row['ID']: row['Price'] for _, row in pricing_df.iterrows()}
-    durations = {row['ID']: {
-        "Macaulay": row['Macaulay Duration'],
-        "Modified": row['Modified Duration']
-    } for _, row in pricing_df.iterrows()}
-
+    # 5. RBI Regulatory Reports
     rbi_reports = generate_rbi_reports({
         "daily_agg": daily_agg,
         "monthly_agg": monthly_agg,
         "rate_shock_results": shock_results
     })
 
+    # 6. Combine results
     results = {
         "cashflows": cashflows,
         "pricing": pricing_df,
@@ -102,7 +106,13 @@ def run_alm(portfolio, valuation_date=None):
         "rbi_reports": rbi_reports
     }
 
+    # 7. Save results to file
     output_file = "/tmp/ALM_Results.xlsx"
+
+    # Prepare prices and durations dicts for export
+    prices = pricing_df.set_index("ID")["Price"].to_dict()
+    durations = pricing_df.set_index("ID")[["Macaulay Duration", "Modified Duration"]].to_dict("index")
+
     export_results_to_excel(
         filepath=output_file,
         prices=prices,
