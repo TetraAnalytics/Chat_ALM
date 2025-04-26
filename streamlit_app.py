@@ -1,14 +1,18 @@
 # streamlit_app.py
 
 import streamlit as st
-import pandas as pd
 import plotly.express as px
 from main import run_alm, load_portfolio_from_excel
-from Analytics.CashflowCalculator import generate_cashflows_for_portfolio
-from Analytics.AggregatedCashflows import (
-    aggregate_daily_cashflows_by_type,
-    aggregate_monthly_cashflows_by_type
-)
+from rbi.reporting import generate_rbi_reports
+
+# --- Quick Import Test for generate_rbi_reports ---
+try:
+    dummy_test = generate_rbi_reports({})
+    print("✅ rbi.reporting imported successfully.")
+except Exception as e:
+    print(f"❌ Import test failed: {e}")
+# ---------------------------------------------------
+
 
 st.set_page_config(page_title="ALM System", layout="wide")
 st.title("📈 Asset Liability Management System")
@@ -62,4 +66,3 @@ if uploaded_file:
                 )
         except FileNotFoundError:
             st.error("ALM Results file not found. Please re-run the analysis.")
-
